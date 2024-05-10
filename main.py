@@ -2,17 +2,20 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
+import numpy as np
 
 load_dotenv()
 API_KEY = os.getenv('OPENAI_SECRET')
 
-
 messages = [
     {
         "role": "system",
-        "content": "You are Climate Tutor Junior, a chatbot that helps students between ages of 10 and 17 learn about "
-                   "climate and details on how to protect it. You are very friendly, and interacts with the users "
-                   "with concise and precise answers, enabling them to think"
+        "content": "You are Climate Tutor Junior, a chatbot that helps students between the ages of 10 and 17 learn "
+                   "about climate issues and how to protect the environment. You are very friendly and provide "
+                   "concise, precise answers that encourage students to think. You stick strictly to the topic of "
+                   "climate and environmental protection, avoiding any off-topic discussions. Additionally, "
+                   "you proactively suggest playing quizzes and 'complete the sentence' games relevant to the "
+                   "conversation's topic to make learning interactive and engaging."
     },
     {
         "role": "user",
@@ -58,20 +61,49 @@ messages = [
     {
         "role": "assistant",
         "content": "That's correct! the more precise answer is harmful Sun rays. The sun rays include UV rays that "
-                   "can cause sunburns and other skin and eye problems. Good job. Do you want another task?"
+                   "can cause sunburns and other skin and eye problems. Good job. Would you like an another game?"
     }
 ]
 
 conversation_message = messages.copy()
 
-def get_response_from_model(new_message):
+
+def format_output_text_message(text, max_width):
+    words = text.split()
+    formatted_text = ""
+    current_line = ""
+
+    for word in words:
+        # Checking if adding the next word would exceed the expected length
+        if len(current_line) + len(word) + 1 > max_width:
+            # Appending a new line with the original line
+            formatted_text += current_line + "\n"
+            current_line = word
+        else:
+            # Adding the word to the current line, not exceeding length yet!
+            if current_line:
+                # Adding a space before the word since it's not the beginning of a line
+                current_line += " " + word
+            else:
+                # Starting a new line with the word
+                current_line = word
+
+    # Add the last line to the formatted text if there's any leftover content
+    if current_line:
+        formatted_text += current_line
+
+    return formatted_text
+
+
+def get_response_from_model(new_message, user_id):
     """This function takes the new message from the user and gets the response from the model"""
     url = "https://api.openai.com/v1/chat/completions"
 
     payload = json.dumps({
         "model": "gpt-3.5-turbo",
         "temperature": 0.2,
-        "messages": new_message
+        "messages": new_message,
+        "user": user_id
     })
     headers = {
         'Content-Type': 'application/json',
@@ -80,12 +112,14 @@ def get_response_from_model(new_message):
     response = requests.request("POST", url, headers=headers, data=payload)
     data = response.json()
     model_content = data["choices"][0]["message"]["content"]
-    print(f'Climate Tutor Junior: {model_content}')
+    formatted_model_content = format_output_text_message(model_content, 60)
+    print(f'Climate Tutor Junior: {formatted_model_content}')
     return model_content
 
 
 print('Climate Tutor Junior: Hi there! I am Climate Tutor Junior, how can i help?')
 while True:
+    user_identifier = 'user_123'  # This can be replaced with an ID fetched from dB for each user
     user_message = input("You: ")
     if user_message == 'exit':
         print('Climate Tutor Junior: Bye!')
@@ -97,7 +131,7 @@ while True:
         "content": user_message
     }
     conversation_message.append(new_message_bit)
-    model_response = get_response_from_model(conversation_message)
+    model_response = get_response_from_model(conversation_message, user_identifier)
     new_model_message_bit = {
         "role": "assistant",
         "content": model_response
