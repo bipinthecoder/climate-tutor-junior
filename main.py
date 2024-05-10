@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
-import numpy as np
 
 load_dotenv()
 API_KEY = os.getenv('OPENAI_SECRET')
@@ -88,7 +87,6 @@ def format_output_text_message(text, max_width):
                 # Starting a new line with the word
                 current_line = word
 
-    # Add the last line to the formatted text if there's any leftover content
     if current_line:
         formatted_text += current_line
 
